@@ -10,7 +10,7 @@ module.exports = class Updater {
   constructor(gameServer) {
     this.url = "http://raw.githubusercontent.com/AJS-development/Ogar-unlimited/" + "master" + "/";
     this.gameServer = gameServer;
-    this.files = require(path.resolve(process.cwd(), 'files.json'));
+
     this.newFiles = {};
     this.updatedFiles = [];
     this.tobe = 0;
@@ -18,24 +18,7 @@ module.exports = class Updater {
   }
 
   init() {
-    this.hashFiles();
-    this.downloadFile({src: 'src/files.json', dst: 'filesTemp.json'}, (err, res)=> {
-      if (!err) {
-        this.newFiles = JSON.parse(fs.readFileSync('filesTemp.json'));
-        this.newFiles.forEach((ele)=> {
-          let currentFile = this.getFileByName(ele.name);
-          if (!currentFile || ele.hash !== currentFile.hash) {
-            this.updatedFiles.push(ele);
-          }
-        });
-        if (this.updatedFiles !== []) {
-        }
-      } else {
-        console.warn("[Initialization] While initializing failed to download files.json");
-        console.warn("[Initialization] Unable to check for updates.");
-        console.warn(err);
-      }
-    });
+
   }
 
   getFileByName(name) {
