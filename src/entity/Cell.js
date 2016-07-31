@@ -13,6 +13,7 @@ function Cell(nodeId, owner, position, mass, gameServer) {
   this.name = '';
   this.visible = true;
   this.position = position;
+  this.watch = -1;
   this.mass = mass; // Starting mass of the cell
   this.cellType = -1; // 0 = Player Cell, 1 = Food, 2 = Virus, 3 = Ejected Mass
   this.spiked = Cell.spi; // If 1, then this cell has spikes around it
@@ -48,6 +49,46 @@ Cell.prototype.setVis = function (state, so) {
     this.visible = state;
   }
   return true;
+};
+Cell.prototype.quadSetup = function(gameServer) {
+  this.gameServer = gameServer;
+ var quad = this.getQuadrant(gameServer) 
+    this.changeQuadrant(quad,gameServer);
+  if (!quad) {
+    setTimeout(function() {
+      this.gameServer = gameServer;
+ var quad = this.getQuadrant(gameServer) 
+    this.changeQuadrant(quad,gameServer);
+    }.bind(this), 500);
+  }
+}
+Cell.prototype.changeQuadrant = function(quad, gameServer) {
+  if (quad) {
+gameServer.getWorld().removeQuadMap(this.quadrant,this.getId());
+  gameServer.getWorld().setQuadMap(quad,this.getId());
+ this.quadrant = quad;
+  } else {
+    console.log("[Quadmap] Change quad failed")
+  }
+};
+Cell.prototype.getQuadrant = function(gameServer) {
+  if (!gameServer && this.gameServer) gameServer = this.gameServer;
+  var x = this.position.x;
+  var y = this.position.y;
+  var config = gameServer.config
+  var borderH = Math.round((config.borderBottom + config.borderTop) / 2);
+  var borderV = Math.round((config.borderRight + config.borderLeft) / 2);
+  if (x > borderV && y > borderH) {
+    return 4;
+  } else if (x > borderV && y <= borderH) {
+    return 1;
+  } else if (x <= borderV && y > borderH) {
+    return 3;
+  } else if (x <= borderV && y <= borderH) {
+    return 2;
+  } else {
+    return false;
+  }
 };
 Cell.prototype.getName = function () {
   if (this.owner && !this.name) {
@@ -110,7 +151,7 @@ Cell.prototype.addMass = function (n) {
       this.mass = this.mass + n;
       this.mass = this.mass/2;
       var randomAngle = Math.random() * 6.28; // Get random angle
-      this.owner.gameServer.autoSplit(this.owner, this, randomAngle, this.mass, 480);
+      this.owner.gameServer.autoSplit(this.owner, this, randomAngle, this.mass, gameServer.config.autoSplitSpeed);
     } else {
       this.mass += n;
       var th = this;
@@ -224,8 +265,9 @@ Cell.prototype.calcMovePhys = function (config) {
       totTravel = Math.min(totTravel + maxTravel, speed);
       var x1 = this.position.x + (totTravel * sin) + xd;
       var y1 = this.position.y + (totTravel * cos) + yd;
-      if (this.gameServer) {
-        this.gameServer.getEjectedNodes().forEach((cell)=> {
+      if (this.gameServer && this.gameServer.config.collideEjected == 1) {
+        this.gameServer.getEjectedNodes().forEach((cell)=> { // needs to be simplified
+        if (cell.quadrant != this.quadrant) return;
           if (this.nodeId == cell.getId()) return;
           if (!this.simpleCollide(x1, y1, cell, collisionDist)) return;
 
@@ -292,6 +334,7 @@ Cell.prototype.calcMovePhys = function (config) {
   // Set position
   this.position.x = x1 >> 0;
   this.position.y = y1 >> 0;
+  if (this.gameServer) this.quadUpdate(this.gameServer)
 };
 
 // Override these
@@ -330,6 +373,11 @@ Cell.prototype.simpleCollide = function (x1, y1, check, d) {
 
 Cell.prototype.abs = function (x) {
   return x < 0 ? -x : x;
+};
+Cell.prototype.quadUpdate = function(gameServer) {
+   var quad = false;
+  quad = this.getQuadrant(gameServer);
+  if (quad && quad != this.quadrant) this.changeQuadrant(quad,gameServer);
 };
 
 Cell.prototype.getDist = function (x1, y1, x2, y2) {
