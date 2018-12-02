@@ -1086,7 +1086,7 @@ player.frozen = fro;
             let n = player.name.indexOf("]");
             if (n != -1) {
 
-              player.premium = ':http://' + player.name.substr(1, n - 1);
+              player.premium = ':' + player.name.substr(1, n - 1);
               player.name = player.name.substr(n + 1);
             }
           }
